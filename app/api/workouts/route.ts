@@ -14,10 +14,26 @@ export async function GET() {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const userId = session.user.id || session.user.email;
-    const workoutsData = await redis.get(`workouts:${userId}`);
-    const workouts = workoutsData ? JSON.parse(workoutsData as string) : [];
+    // Always use email as the consistent user identifier
+    const userId = session.user.email;
+    console.log(`Loading workouts for user: ${userId}`);
 
+    const workoutsData = await redis.get(`workouts:${userId}`);
+    let workouts = [];
+
+    if (workoutsData) {
+      // Handle both string and object data
+      if (typeof workoutsData === "string") {
+        workouts = JSON.parse(workoutsData);
+      } else if (Array.isArray(workoutsData)) {
+        workouts = workoutsData;
+      } else {
+        console.log("Unexpected data type:", typeof workoutsData);
+        workouts = [];
+      }
+    }
+
+    console.log(`Found ${workouts.length} workouts for user: ${userId}`);
     return NextResponse.json({ workouts });
   } catch (error) {
     console.error("Get workouts error:", error);
@@ -36,10 +52,15 @@ export async function POST(request: NextRequest) {
     }
 
     const { workouts } = await request.json();
-    const userId = session.user.id || session.user.email;
+    // Always use email as the consistent user identifier
+    const userId = session.user.email;
 
+    console.log(`Saving ${workouts.length} workouts for user: ${userId}`);
+
+    // Store as JSON string to ensure consistency
     await redis.set(`workouts:${userId}`, JSON.stringify(workouts));
 
+    console.log(`Successfully saved workouts for user: ${userId}`);
     return NextResponse.json({ message: "Workouts saved successfully" });
   } catch (error) {
     console.error("Save workouts error:", error);

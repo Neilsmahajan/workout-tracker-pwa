@@ -12,4 +12,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: UpstashRedisAdapter(redis),
   providers: [Google],
   secret: process.env.AUTH_SECRET,
+  session: {
+    strategy: "database",
+  },
+  callbacks: {
+    session: async ({ session, user }) => {
+      if (session?.user && user) {
+        session.user.id = user.id;
+      }
+      return session;
+    },
+  },
 });

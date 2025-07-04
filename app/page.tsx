@@ -72,11 +72,22 @@ export default function WorkoutTracker() {
 
     setSyncing(true);
     try {
-      await fetch("/api/workouts", {
+      console.log("Syncing workouts...", workouts.length, "workouts");
+      const response = await fetch("/api/workouts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ workouts }),
       });
+
+      if (response.ok) {
+        console.log("Workouts synced successfully");
+      } else {
+        console.error(
+          "Failed to sync workouts:",
+          response.status,
+          response.statusText,
+        );
+      }
     } catch (error) {
       console.error("Sync workouts error:", error);
     } finally {
@@ -86,7 +97,7 @@ export default function WorkoutTracker() {
 
   // Auto-sync workouts when they change
   useEffect(() => {
-    if (session?.user && workouts.length > 0) {
+    if (session?.user) {
       const timeoutId = setTimeout(() => {
         syncWorkouts();
       }, 1000); // Debounce saves
@@ -97,9 +108,11 @@ export default function WorkoutTracker() {
 
   const loadWorkouts = async () => {
     try {
+      console.log("Loading workouts...");
       const response = await fetch("/api/workouts");
       if (response.ok) {
         const data = await response.json();
+        console.log("Loaded workouts:", data.workouts);
         // Convert timestamp strings back to Date objects
         const workoutsWithDates = data.workouts.map((workout: Workout) => ({
           ...workout,
@@ -112,6 +125,12 @@ export default function WorkoutTracker() {
           })),
         }));
         setWorkouts(workoutsWithDates);
+      } else {
+        console.error(
+          "Failed to load workouts:",
+          response.status,
+          response.statusText,
+        );
       }
     } catch (error) {
       console.error("Load workouts error:", error);
@@ -119,6 +138,20 @@ export default function WorkoutTracker() {
   };
 
   const handleLogout = async () => {
+    // Sync current workouts before logout
+    if (session?.user && workouts.length > 0) {
+      try {
+        await fetch("/api/workouts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workouts }),
+        });
+        console.log("Final sync before logout completed");
+      } catch (error) {
+        console.error("Failed to sync before logout:", error);
+      }
+    }
+
     await signOut();
     setWorkouts([]);
     setCurrentView("workouts");
@@ -143,7 +176,7 @@ export default function WorkoutTracker() {
 
   // Convert session user to our User type
   const user: User = {
-    id: session.user.id || session.user.email || "",
+    id: session.user.email || "",
     name: session.user.name || "",
     email: session.user.email || "",
   };
@@ -159,7 +192,7 @@ export default function WorkoutTracker() {
     );
   }
 
-  const createWorkout = () => {
+  const createWorkout = async () => {
     if (!newWorkoutName.trim()) return;
 
     const newWorkout: Workout = {
@@ -168,13 +201,43 @@ export default function WorkoutTracker() {
       exercises: [],
     };
 
-    setWorkouts([...workouts, newWorkout]);
+    const updatedWorkouts = [...workouts, newWorkout];
+    setWorkouts(updatedWorkouts);
     setNewWorkoutName("");
     setIsWorkoutDialogOpen(false);
+
+    // Immediately sync the new workout
+    if (session?.user) {
+      try {
+        await fetch("/api/workouts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workouts: updatedWorkouts }),
+        });
+        console.log("New workout saved immediately");
+      } catch (error) {
+        console.error("Failed to save new workout:", error);
+      }
+    }
   };
 
-  const deleteWorkout = (workoutId: string) => {
-    setWorkouts(workouts.filter((w) => w.id !== workoutId));
+  const deleteWorkout = async (workoutId: string) => {
+    const updatedWorkouts = workouts.filter((w) => w.id !== workoutId);
+    setWorkouts(updatedWorkouts);
+
+    // Immediately sync the deletion
+    if (session?.user) {
+      try {
+        await fetch("/api/workouts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workouts: updatedWorkouts }),
+        });
+        console.log("Workout deletion saved immediately");
+      } catch (error) {
+        console.error("Failed to save workout deletion:", error);
+      }
+    }
   };
 
   const createExercise = () => {
@@ -350,6 +413,19 @@ export default function WorkoutTracker() {
           </div>
         </div>
         <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={syncWorkouts}
+            disabled={syncing}
+            title="Sync workouts"
+          >
+            {syncing ? (
+              <CloudOff className="w-4 h-4 animate-pulse" />
+            ) : (
+              <Cloud className="w-4 h-4" />
+            )}
+          </Button>
           <Button
             variant="ghost"
             size="sm"
