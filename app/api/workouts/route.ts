@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { Redis } from "@upstash/redis";
 
 const redis = new Redis({
@@ -6,24 +7,15 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN!,
 });
 
-async function getUser(request: NextRequest) {
-  const sessionId = request.cookies.get("session")?.value;
-  if (!sessionId) return null;
-
-  const sessionData = await redis.get(sessionId);
-  if (!sessionData) return null;
-
-  return JSON.parse(sessionData as string);
-}
-
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUser(request);
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const workoutsData = await redis.get(`workouts:${user.userId}`);
+    const userId = session.user.id || session.user.email;
+    const workoutsData = await redis.get(`workouts:${userId}`);
     const workouts = workoutsData ? JSON.parse(workoutsData as string) : [];
 
     return NextResponse.json({ workouts });
@@ -38,14 +30,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getUser(request);
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
     const { workouts } = await request.json();
+    const userId = session.user.id || session.user.email;
 
-    await redis.set(`workouts:${user.userId}`, JSON.stringify(workouts));
+    await redis.set(`workouts:${userId}`, JSON.stringify(workouts));
 
     return NextResponse.json({ message: "Workouts saved successfully" });
   } catch (error) {

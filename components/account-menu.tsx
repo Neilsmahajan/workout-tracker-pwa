@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User as UserIcon, LogOut, ArrowLeft } from "lucide-react";
@@ -18,7 +19,7 @@ export function AccountMenu({ user, onLogout, onBack }: AccountMenuProps) {
   const handleLogout = async () => {
     setLoading(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await signOut();
       onLogout();
     } catch (error) {
       console.error("Logout error:", error);

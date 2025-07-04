@@ -11,4 +11,5 @@ const redis = new Redis({
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: UpstashRedisAdapter(redis),
   providers: [Google],
+  secret: process.env.AUTH_SECRET,
 });

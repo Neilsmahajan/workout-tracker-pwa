@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,8 +44,7 @@ import { AccountMenu } from "@/components/account-menu";
 import { User, Set, Exercise, Workout, View } from "@/lib/types";
 
 export default function WorkoutTracker() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: session, status } = useSession();
   const [syncing, setSyncing] = useState(false);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [currentView, setCurrentView] = useState<View>("workouts");
@@ -60,20 +60,15 @@ export default function WorkoutTracker() {
   const [isExerciseDialogOpen, setIsExerciseDialogOpen] = useState(false);
   const [isSetDialogOpen, setIsSetDialogOpen] = useState(false);
 
-  // Check authentication on mount
+  // Load workouts when session changes
   useEffect(() => {
-    checkAuth();
-  }, []);
-
-  // Load workouts when user changes
-  useEffect(() => {
-    if (user) {
+    if (session?.user) {
       loadWorkouts();
     }
-  }, [user]);
+  }, [session]);
 
   const syncWorkouts = useCallback(async () => {
-    if (!user) return;
+    if (!session?.user) return;
 
     setSyncing(true);
     try {
@@ -87,32 +82,18 @@ export default function WorkoutTracker() {
     } finally {
       setSyncing(false);
     }
-  }, [user, workouts]);
+  }, [session?.user, workouts]);
 
   // Auto-sync workouts when they change
   useEffect(() => {
-    if (user && workouts.length > 0) {
+    if (session?.user && workouts.length > 0) {
       const timeoutId = setTimeout(() => {
         syncWorkouts();
       }, 1000); // Debounce saves
 
       return () => clearTimeout(timeoutId);
     }
-  }, [workouts, user, syncWorkouts]);
-
-  const checkAuth = async () => {
-    try {
-      const response = await fetch("/api/auth/me");
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-      }
-    } catch (error) {
-      console.error("Auth check error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [workouts, session?.user, syncWorkouts]);
 
   const loadWorkouts = async () => {
     try {
@@ -137,18 +118,14 @@ export default function WorkoutTracker() {
     }
   };
 
-  const handleLogin = (userData: User) => {
-    setUser(userData);
-  };
-
-  const handleLogout = () => {
-    setUser(null);
+  const handleLogout = async () => {
+    await signOut();
     setWorkouts([]);
     setCurrentView("workouts");
   };
 
   // Show loading screen
-  if (loading) {
+  if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -160,9 +137,16 @@ export default function WorkoutTracker() {
   }
 
   // Show auth form if not logged in
-  if (!user) {
-    return <AuthForm onSuccess={handleLogin} />;
+  if (!session?.user) {
+    return <AuthForm />;
   }
+
+  // Convert session user to our User type
+  const user: User = {
+    id: session.user.id || session.user.email || "",
+    name: session.user.name || "",
+    email: session.user.email || "",
+  };
 
   // Show account menu
   if (currentView === "account") {
