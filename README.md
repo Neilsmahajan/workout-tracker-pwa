@@ -2,6 +2,8 @@
 
 A modern Progressive Web App (PWA) for tracking workouts, exercises, and sets. Built with Next.js 14, TypeScript, and Tailwind CSS, featuring a clean mobile-first design with offline capabilities and real-time data synchronization.
 
+🚀 **[Live Demo](https://workout-tracker-pwa-nu.vercel.app/)** - Try it now!
+
 ![Workout Tracker](https://img.shields.io/badge/Version-1.0.0-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-14.2.15-black.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7.2-blue.svg)
@@ -28,7 +30,7 @@ A modern Progressive Web App (PWA) for tracking workouts, exercises, and sets. B
 
 ### User Experience
 
-- **🔐 User Authentication**: Secure login and signup system
+- **🔐 User Authentication**: Secure Google OAuth authentication with Auth.js
 - **👤 Account Management**: User profile and settings
 - **🎯 Intuitive Navigation**: Clean, simple interface with minimal learning curve
 - **⚡ Fast Performance**: Optimized for speed and smooth interactions
@@ -51,7 +53,8 @@ A modern Progressive Web App (PWA) for tracking workouts, exercises, and sets. B
 
 ### Database & Backend
 
-- **[Upstash Redis](https://upstash.com/)** - Serverless Redis database
+- **[Auth.js](https://authjs.dev/)** - Modern authentication with Google OAuth
+- **[Upstash Redis](https://upstash.com/)** - Serverless Redis database with Auth.js adapter
 - **Next.js API Routes** - Serverless backend functions
 
 ### PWA & Performance
@@ -66,7 +69,8 @@ A modern Progressive Web App (PWA) for tracking workouts, exercises, and sets. B
 
 - Node.js 18+
 - pnpm (recommended) or npm
-- Upstash Redis database (for data persistence)
+- Upstash Redis database (for data persistence and auth sessions)
+- Google OAuth App (for authentication)
 
 ### Installation
 
@@ -91,13 +95,25 @@ A modern Progressive Web App (PWA) for tracking workouts, exercises, and sets. B
 
    ```env
    # Upstash Redis Configuration
-   UPSTASH_REDIS_REST_URL=your_upstash_redis_url
-   UPSTASH_REDIS_REST_TOKEN=your_upstash_redis_token
+   KV_REST_API_URL=your_upstash_redis_url
+   KV_REST_API_TOKEN=your_upstash_redis_token
 
-   # Optional: Add other environment variables as needed
-   NEXTAUTH_SECRET=your_secret_key
+   # Auth.js Configuration
+   AUTH_SECRET=your_auth_secret
    NEXTAUTH_URL=http://localhost:3000
+
+   # Google OAuth Configuration
+   AUTH_GOOGLE_ID=your_google_oauth_client_id
+   AUTH_GOOGLE_SECRET=your_google_oauth_client_secret
    ```
+
+   **Setting up Google OAuth:**
+
+   1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+   2. Create a new project or select existing one
+   3. Enable Google+ API
+   4. Create OAuth 2.0 credentials
+   5. Add authorized redirect URIs: `http://localhost:3000/api/auth/callback/google` (development) and `https://your-domain.com/api/auth/callback/google` (production)
 
 4. **Run the development server**
 
@@ -115,7 +131,7 @@ A modern Progressive Web App (PWA) for tracking workouts, exercises, and sets. B
 
 ### Getting Started
 
-1. **Sign Up/Login**: Create an account or log in with existing credentials
+1. **Sign In with Google**: Authenticate using your Google account
 2. **Create Workout**: Add a new workout with a custom name
 3. **Add Exercises**: Add exercises to your workout
 4. **Track Sets**: Record weight, reps, and track your progress
@@ -132,30 +148,38 @@ A modern Progressive Web App (PWA) for tracking workouts, exercises, and sets. B
 
 ```
 workout-tracker-pwa/
+├── auth.ts                       # Auth.js configuration with Google OAuth
 ├── app/                          # Next.js App Router
 │   ├── api/                      # API Routes
-│   │   ├── auth/                 # Authentication endpoints
-│   │   │   ├── login/
-│   │   │   ├── logout/
-│   │   │   ├── me/
-│   │   │   └── signup/
+│   │   ├── auth/                 # Auth.js authentication endpoints
+│   │   │   └── [...nextauth]/    # NextAuth.js dynamic route
+│   │   │       └── route.ts      # Auth handlers
 │   │   └── workouts/             # Workout data endpoints
+│   │       └── route.ts          # Workout CRUD operations
 │   ├── fonts/                    # Custom fonts (Geist)
 │   ├── globals.css               # Global styles
 │   ├── layout.tsx                # Root layout with PWA meta
 │   ├── manifest.json/            # PWA manifest generator
+│   │   └── route.ts              # Dynamic manifest
 │   └── page.tsx                  # Main application component
 ├── components/                   # React components
 │   ├── ui/                       # shadcn/ui components
+│   │   ├── alert-dialog.tsx      # Alert dialog component
+│   │   ├── alert.tsx             # Alert component
+│   │   ├── button.tsx            # Button component
+│   │   ├── card.tsx              # Card component
+│   │   ├── dialog.tsx            # Dialog component
+│   │   └── input.tsx             # Input component
 │   ├── account-menu.tsx          # User account interface
-│   └── auth-form.tsx             # Authentication forms
+│   └── auth-form.tsx             # Google OAuth authentication
 ├── lib/                          # Utilities and types
 │   ├── types.ts                  # TypeScript interfaces
 │   └── utils.ts                  # Helper functions
-├── public/                       # Static assets
-│   ├── icons/                    # PWA icons and splash screens
-│   └── manifest files
-└── configuration files           # Next.js, TypeScript, Tailwind config
+├── public/                       # Static assets and images
+├── components.json               # shadcn/ui configuration
+├── next.config.mjs               # Next.js configuration with PWA
+├── tailwind.config.ts            # Tailwind CSS configuration
+└── tsconfig.json                 # TypeScript configuration
 ```
 
 ## 🔧 Development
@@ -184,10 +208,18 @@ pnpm type-check   # Run TypeScript compiler check
 
 ### Vercel (Recommended)
 
+🌐 **Live Demo**: [https://workout-tracker-pwa-nu.vercel.app/](https://workout-tracker-pwa-nu.vercel.app/)
+
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Neilsmahajan/workout-tracker-pwa)
 
 1. Connect your GitHub repository to Vercel
-2. Add environment variables in Vercel dashboard
+2. Add environment variables in Vercel dashboard:
+   - `KV_REST_API_URL`
+   - `KV_REST_API_TOKEN`
+   - `AUTH_SECRET`
+   - `AUTH_GOOGLE_ID`
+   - `AUTH_GOOGLE_SECRET`
+   - `NEXTAUTH_URL` (set to your production domain)
 3. Deploy automatically on every push to main branch
 
 ### Manual Deployment
@@ -223,9 +255,11 @@ This project is open source and available under the [MIT License](LICENSE).
 ## 🙏 Acknowledgments
 
 - [Next.js](https://nextjs.org/) team for the amazing framework
+- [Auth.js](https://authjs.dev/) for secure authentication solutions
 - [shadcn/ui](https://ui.shadcn.com/) for the beautiful component library
 - [Vercel](https://vercel.com/) for deployment platform
 - [Upstash](https://upstash.com/) for serverless Redis database
+- [Google](https://developers.google.com/identity) for OAuth authentication
 
 ---
 
