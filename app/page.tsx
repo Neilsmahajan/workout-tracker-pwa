@@ -59,6 +59,12 @@ export default function WorkoutTracker() {
   const [isWorkoutDialogOpen, setIsWorkoutDialogOpen] = useState(false);
   const [isExerciseDialogOpen, setIsExerciseDialogOpen] = useState(false);
   const [isSetDialogOpen, setIsSetDialogOpen] = useState(false);
+  const [editingWorkoutId, setEditingWorkoutId] = useState<string | null>(null);
+  const [editingExerciseId, setEditingExerciseId] = useState<string | null>(
+    null,
+  );
+  const [editWorkoutName, setEditWorkoutName] = useState("");
+  const [editExerciseName, setEditExerciseName] = useState("");
 
   // Load workouts when session changes
   useEffect(() => {
@@ -488,20 +494,76 @@ export default function WorkoutTracker() {
                           <div
                             className="flex-1"
                             onClick={() => {
-                              setSelectedWorkout(workout);
-                              setCurrentView("workout-detail");
+                              if (editingWorkoutId !== workout.id) {
+                                setSelectedWorkout(workout);
+                                setCurrentView("workout-detail");
+                              }
                             }}
                           >
-                            <h3 className="font-semibold">{workout.name}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {workout.exercises.length} exercise
-                              {workout.exercises.length !== 1 ? "s" : ""}
-                            </p>
+                            {editingWorkoutId === workout.id ? (
+                              <div className="flex items-center space-x-2">
+                                <Input
+                                  value={editWorkoutName}
+                                  onChange={(e) =>
+                                    setEditWorkoutName(e.target.value)
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      updateWorkoutName(
+                                        workout.id,
+                                        editWorkoutName,
+                                      );
+                                    } else if (e.key === "Escape") {
+                                      cancelEditingWorkout();
+                                    }
+                                  }}
+                                  className="text-base font-semibold"
+                                  autoFocus
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() =>
+                                    updateWorkoutName(
+                                      workout.id,
+                                      editWorkoutName,
+                                    )
+                                  }
+                                >
+                                  Save
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={cancelEditingWorkout}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <>
+                                <h3 className="font-semibold">
+                                  {workout.name}
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                  {workout.exercises.length} exercise
+                                  {workout.exercises.length !== 1 ? "s" : ""}
+                                </p>
+                              </>
+                            )}
                           </div>
                           <div className="flex items-center space-x-2">
                             <div {...provided.dragHandleProps}>
                               <GripVertical className="w-4 h-4 text-muted-foreground" />
                             </div>
+                            {editingWorkoutId !== workout.id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => startEditingWorkout(workout)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            )}
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="sm">
@@ -564,7 +626,51 @@ export default function WorkoutTracker() {
         >
           <ArrowLeft className="w-4 h-4" />
         </Button>
-        <h1 className="text-2xl font-bold flex-1">{selectedWorkout?.name}</h1>
+        {editingWorkoutId === selectedWorkout?.id ? (
+          <div className="flex items-center space-x-2 flex-1">
+            <Input
+              value={editWorkoutName}
+              onChange={(e) => setEditWorkoutName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && selectedWorkout) {
+                  updateWorkoutName(selectedWorkout.id, editWorkoutName);
+                } else if (e.key === "Escape") {
+                  cancelEditingWorkout();
+                }
+              }}
+              className="text-2xl font-bold"
+              autoFocus
+            />
+            <Button
+              size="sm"
+              onClick={() =>
+                selectedWorkout &&
+                updateWorkoutName(selectedWorkout.id, editWorkoutName)
+              }
+            >
+              Save
+            </Button>
+            <Button size="sm" variant="outline" onClick={cancelEditingWorkout}>
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center flex-1">
+            <h1 className="text-2xl font-bold flex-1">
+              {selectedWorkout?.name}
+            </h1>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                selectedWorkout && startEditingWorkout(selectedWorkout)
+              }
+              className="mr-2"
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
         <Dialog
           open={isExerciseDialogOpen}
           onOpenChange={setIsExerciseDialogOpen}
@@ -619,20 +725,76 @@ export default function WorkoutTracker() {
                           <div
                             className="flex-1"
                             onClick={() => {
-                              setSelectedExercise(exercise);
-                              setCurrentView("exercise-detail");
+                              if (editingExerciseId !== exercise.id) {
+                                setSelectedExercise(exercise);
+                                setCurrentView("exercise-detail");
+                              }
                             }}
                           >
-                            <h3 className="font-semibold">{exercise.name}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {exercise.sets.length} set
-                              {exercise.sets.length !== 1 ? "s" : ""}
-                            </p>
+                            {editingExerciseId === exercise.id ? (
+                              <div className="flex items-center space-x-2">
+                                <Input
+                                  value={editExerciseName}
+                                  onChange={(e) =>
+                                    setEditExerciseName(e.target.value)
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      updateExerciseName(
+                                        exercise.id,
+                                        editExerciseName,
+                                      );
+                                    } else if (e.key === "Escape") {
+                                      cancelEditingExercise();
+                                    }
+                                  }}
+                                  className="text-base font-semibold"
+                                  autoFocus
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() =>
+                                    updateExerciseName(
+                                      exercise.id,
+                                      editExerciseName,
+                                    )
+                                  }
+                                >
+                                  Save
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={cancelEditingExercise}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <>
+                                <h3 className="font-semibold">
+                                  {exercise.name}
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                  {exercise.sets.length} set
+                                  {exercise.sets.length !== 1 ? "s" : ""}
+                                </p>
+                              </>
+                            )}
                           </div>
                           <div className="flex items-center space-x-2">
                             <div {...provided.dragHandleProps}>
                               <GripVertical className="w-4 h-4 text-muted-foreground" />
                             </div>
+                            {editingExerciseId !== exercise.id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => startEditingExercise(exercise)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            )}
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="sm">
@@ -695,7 +857,51 @@ export default function WorkoutTracker() {
         >
           <ArrowLeft className="w-4 h-4" />
         </Button>
-        <h1 className="text-2xl font-bold flex-1">{selectedExercise?.name}</h1>
+        {editingExerciseId === selectedExercise?.id ? (
+          <div className="flex items-center space-x-2 flex-1">
+            <Input
+              value={editExerciseName}
+              onChange={(e) => setEditExerciseName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && selectedExercise) {
+                  updateExerciseName(selectedExercise.id, editExerciseName);
+                } else if (e.key === "Escape") {
+                  cancelEditingExercise();
+                }
+              }}
+              className="text-2xl font-bold"
+              autoFocus
+            />
+            <Button
+              size="sm"
+              onClick={() =>
+                selectedExercise &&
+                updateExerciseName(selectedExercise.id, editExerciseName)
+              }
+            >
+              Save
+            </Button>
+            <Button size="sm" variant="outline" onClick={cancelEditingExercise}>
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center flex-1">
+            <h1 className="text-2xl font-bold flex-1">
+              {selectedExercise?.name}
+            </h1>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                selectedExercise && startEditingExercise(selectedExercise)
+              }
+              className="mr-2"
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
         <Dialog open={isSetDialogOpen} onOpenChange={setIsSetDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm">
@@ -758,6 +964,83 @@ export default function WorkoutTracker() {
       )}
     </div>
   );
+
+  const updateWorkoutName = async (workoutId: string, newName: string) => {
+    if (!newName.trim()) return;
+
+    const updatedWorkouts = workouts.map((workout) =>
+      workout.id === workoutId ? { ...workout, name: newName } : workout,
+    );
+
+    setWorkouts(updatedWorkouts);
+
+    // Update selectedWorkout if it's the one being edited
+    if (selectedWorkout?.id === workoutId) {
+      setSelectedWorkout({ ...selectedWorkout, name: newName });
+    }
+
+    setEditingWorkoutId(null);
+    setEditWorkoutName("");
+
+    // Immediately sync the update
+    if (session?.user) {
+      try {
+        await fetch("/api/workouts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workouts: updatedWorkouts }),
+        });
+        console.log("Workout name update saved immediately");
+      } catch (error) {
+        console.error("Failed to save workout name update:", error);
+      }
+    }
+  };
+
+  const updateExerciseName = (exerciseId: string, newName: string) => {
+    if (!newName.trim() || !selectedWorkout) return;
+
+    const updatedExercises = selectedWorkout.exercises.map((exercise) =>
+      exercise.id === exerciseId ? { ...exercise, name: newName } : exercise,
+    );
+
+    const updatedWorkouts = workouts.map((workout) =>
+      workout.id === selectedWorkout.id
+        ? { ...workout, exercises: updatedExercises }
+        : workout,
+    );
+
+    setWorkouts(updatedWorkouts);
+    setSelectedWorkout({ ...selectedWorkout, exercises: updatedExercises });
+
+    // Update selectedExercise if it's the one being edited
+    if (selectedExercise?.id === exerciseId) {
+      setSelectedExercise({ ...selectedExercise, name: newName });
+    }
+
+    setEditingExerciseId(null);
+    setEditExerciseName("");
+  };
+
+  const startEditingWorkout = (workout: Workout) => {
+    setEditingWorkoutId(workout.id);
+    setEditWorkoutName(workout.name);
+  };
+
+  const startEditingExercise = (exercise: Exercise) => {
+    setEditingExerciseId(exercise.id);
+    setEditExerciseName(exercise.name);
+  };
+
+  const cancelEditingWorkout = () => {
+    setEditingWorkoutId(null);
+    setEditWorkoutName("");
+  };
+
+  const cancelEditingExercise = () => {
+    setEditingExerciseId(null);
+    setEditExerciseName("");
+  };
 
   return (
     <div className="min-h-screen bg-background">
