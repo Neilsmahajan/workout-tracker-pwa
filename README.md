@@ -35,6 +35,88 @@ A modern Progressive Web App (PWA) for tracking workouts, exercises, and sets. B
 - **🎯 Intuitive Navigation**: Clean, simple interface with minimal learning curve
 - **⚡ Fast Performance**: Optimized for speed and smooth interactions
 - **🌙 Modern UI**: Beautiful design with shadcn/ui components
+- **🔄 Route-Based Navigation**: Separate pages for workouts, exercises, and sets with browser back button support
+- **📱 Deep Linking**: Users can bookmark and share specific workouts or exercises
+
+## 🗺️ App Structure
+
+### Route Architecture
+
+The app uses a route-based structure that enables proper navigation and PWA functionality:
+
+#### `/` - Home Page
+
+- **Purpose**: Entry point that redirects authenticated users to `/workouts`
+- **Features**:
+  - Shows authentication form for unauthenticated users
+  - Automatically redirects to `/workouts` when user is logged in
+
+#### `/workouts` - Workouts List
+
+- **Purpose**: Display all workouts for the authenticated user
+- **Features**:
+  - View all workouts with exercise counts
+  - Create new workouts
+  - Edit workout names
+  - Delete workouts with confirmation
+  - Drag and drop to reorder workouts
+  - Navigate to account settings
+  - Click on workout to view details
+
+#### `/workouts/[id]` - Workout Detail
+
+- **Purpose**: Display exercises within a specific workout
+- **Features**:
+  - View all exercises in the workout with set counts
+  - Create new exercises
+  - Edit exercise names
+  - Delete exercises with confirmation
+  - Drag and drop to reorder exercises
+  - Navigate back to workouts list
+  - Click on exercise to view sets
+
+#### `/workouts/[id]/exercises/[exerciseId]` - Exercise Detail (Sets)
+
+- **Purpose**: Manage sets for a specific exercise
+- **Features**:
+  - View all sets with weight and reps
+  - Create new sets
+  - Edit existing sets inline
+  - Delete sets with confirmation
+  - Drag and drop to reorder sets
+  - Navigate back to workout detail
+
+#### `/account` - Account Settings
+
+- **Purpose**: Manage user account and authentication
+- **Features**:
+  - View user profile information
+  - Sign out functionality
+  - Navigate back to workouts
+
+### Navigation Flow
+
+```
+/ (Home)
+├── /workouts (Workouts List)
+│   ├── /workouts/[id] (Workout Detail)
+│   │   └── /workouts/[id]/exercises/[exerciseId] (Exercise Sets)
+│   └── /account (Account Settings)
+```
+
+### PWA Navigation Benefits
+
+- **Back Navigation**: Each page supports browser back button and gesture navigation
+- **Deep Linking**: Users can bookmark and share specific workouts or exercises
+- **Offline Support**: All routes work offline with cached data
+- **Mobile Optimized**: Swipe gestures and touch-friendly interface
+
+### Data Management
+
+- **Automatic Sync**: Changes are automatically synced to the server
+- **Optimistic Updates**: UI updates immediately for better UX
+- **Error Handling**: Graceful fallbacks for network issues
+- **State Persistence**: Data persists across route changes
 
 ## 🛠️ Tech Stack
 
@@ -143,6 +225,8 @@ A modern Progressive Web App (PWA) for tracking workouts, exercises, and sets. B
 - **Offline Mode**: Continue tracking even without internet
 - **Auto-Sync**: Data automatically syncs when connection is restored
 - **Account Management**: Access your profile and logout from the account menu
+- **Route Navigation**: Use browser back button or swipe gestures to navigate between pages
+- **Deep Linking**: Bookmark specific workouts or exercises for quick access
 
 ## 🏗️ Project Structure
 
@@ -156,12 +240,21 @@ workout-tracker-pwa/
 │   │   │       └── route.ts      # Auth handlers
 │   │   └── workouts/             # Workout data endpoints
 │   │       └── route.ts          # Workout CRUD operations
+│   ├── account/                  # Account management page
+│   │   └── page.tsx              # Account settings and profile
+│   ├── workouts/                 # Workout-related pages
+│   │   ├── page.tsx              # Workouts list page
+│   │   └── [id]/                 # Dynamic workout pages
+│   │       ├── page.tsx          # Workout detail (exercises list)
+│   │       └── exercises/        # Exercise-related pages
+│   │           └── [exerciseId]/ # Dynamic exercise pages
+│   │               └── page.tsx  # Exercise detail (sets management)
 │   ├── fonts/                    # Custom fonts (Geist)
 │   ├── globals.css               # Global styles
 │   ├── layout.tsx                # Root layout with PWA meta
 │   ├── manifest.json/            # PWA manifest generator
 │   │   └── route.ts              # Dynamic manifest
-│   └── page.tsx                  # Main application component
+│   └── page.tsx                  # Home page with auth redirect
 ├── components/                   # React components
 │   ├── ui/                       # shadcn/ui components
 │   │   ├── alert-dialog.tsx      # Alert dialog component
@@ -175,7 +268,7 @@ workout-tracker-pwa/
 ├── lib/                          # Utilities and types
 │   ├── types.ts                  # TypeScript interfaces
 │   └── utils.ts                  # Helper functions
-├── public/                       # Static assets and images
+├── public/                       # Static assets and PWA icons
 ├── components.json               # shadcn/ui configuration
 ├── next.config.mjs               # Next.js configuration with PWA
 ├── tailwind.config.ts            # Tailwind CSS configuration

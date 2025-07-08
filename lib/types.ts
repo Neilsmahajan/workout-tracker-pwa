@@ -22,9 +22,3 @@ export interface Workout {
   name: string;
   exercises: Exercise[];
 }
-
-export type View =
-  | "workouts"
-  | "workout-detail"
-  | "exercise-detail"
-  | "account";
