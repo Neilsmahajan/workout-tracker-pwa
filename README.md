@@ -190,7 +190,6 @@ The app uses a route-based structure that enables proper navigation and PWA func
    ```
 
    **Setting up Google OAuth:**
-
    1. Go to [Google Cloud Console](https://console.cloud.google.com/)
    2. Create a new project or select existing one
    3. Enable Google+ API

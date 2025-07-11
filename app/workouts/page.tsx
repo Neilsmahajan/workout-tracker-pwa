@@ -40,11 +40,15 @@ import {
   DropResult,
 } from "@hello-pangea/dnd";
 import { Workout } from "@/lib/types";
+import { FullPageLoading } from "@/components/ui/loading";
 
 export default function WorkoutsPage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [newWorkoutName, setNewWorkoutName] = useState("");
   const [isWorkoutDialogOpen, setIsWorkoutDialogOpen] = useState(false);
@@ -98,6 +102,7 @@ export default function WorkoutsPage() {
   }, [workouts, session?.user, syncWorkouts]);
 
   const loadWorkouts = async () => {
+    setLoading(true);
     try {
       console.log("Loading workouts...");
       const response = await fetch("/api/workouts");
@@ -125,6 +130,8 @@ export default function WorkoutsPage() {
       }
     } catch (error) {
       console.error("Load workouts error:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -144,6 +151,7 @@ export default function WorkoutsPage() {
 
     // Immediately sync the new workout
     if (session?.user) {
+      setCreating(true);
       try {
         await fetch("/api/workouts", {
           method: "POST",
@@ -153,6 +161,8 @@ export default function WorkoutsPage() {
         console.log("New workout synced");
       } catch (error) {
         console.error("Failed to sync new workout:", error);
+      } finally {
+        setCreating(false);
       }
     }
   };
@@ -163,6 +173,7 @@ export default function WorkoutsPage() {
 
     // Immediately sync the deletion
     if (session?.user) {
+      setDeleting(workoutId);
       try {
         await fetch("/api/workouts", {
           method: "POST",
@@ -172,6 +183,8 @@ export default function WorkoutsPage() {
         console.log("Workout deletion synced");
       } catch (error) {
         console.error("Failed to sync workout deletion:", error);
+      } finally {
+        setDeleting(null);
       }
     }
   };
@@ -222,6 +235,8 @@ export default function WorkoutsPage() {
     setWorkouts(items);
   };
 
+  if (loading) return <FullPageLoading text="Loading workouts..." />;
+
   return (
     <div className="p-4 max-w-md mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -262,7 +277,8 @@ export default function WorkoutsPage() {
                       {...provided.draggableProps}
                       className="cursor-pointer hover:shadow-md transition-shadow"
                       onClick={() =>
-                        !editingWorkoutId && router.push(`/workouts/${workout.id}`)
+                        !editingWorkoutId &&
+                        router.push(`/workouts/${workout.id}`)
                       }
                     >
                       <CardContent className="p-4">
@@ -282,7 +298,10 @@ export default function WorkoutsPage() {
                                 }
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
-                                    updateWorkoutName(workout.id, editWorkoutName);
+                                    updateWorkoutName(
+                                      workout.id,
+                                      editWorkoutName,
+                                    );
                                   }
                                   if (e.key === "Escape") {
                                     cancelEditingWorkout();
@@ -327,10 +346,13 @@ export default function WorkoutsPage() {
                               </AlertDialogTrigger>
                               <AlertDialogContent>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Workout</AlertDialogTitle>
+                                  <AlertDialogTitle>
+                                    Delete Workout
+                                  </AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Are you sure you want to delete &quot;{workout.name}&quot;? This
-                                    action cannot be undone.
+                                    Are you sure you want to delete &quot;
+                                    {workout.name}&quot;? This action cannot be
+                                    undone.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -339,7 +361,9 @@ export default function WorkoutsPage() {
                                     onClick={() => deleteWorkout(workout.id)}
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                   >
-                                    Delete
+                                    {deleting === workout.id
+                                      ? "Deleting..."
+                                      : "Delete"}
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -382,7 +406,9 @@ export default function WorkoutsPage() {
               >
                 Cancel
               </Button>
-              <Button onClick={createWorkout}>Add Workout</Button>
+              <Button onClick={createWorkout}>
+                {creating ? "Creating..." : "Add Workout"}
+              </Button>
             </div>
           </div>
         </DialogContent>

@@ -24,13 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Plus,
-  Trash2,
-  ArrowLeft,
-  Edit,
-  GripVertical,
-} from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Edit, GripVertical } from "lucide-react";
 import {
   DragDropContext,
   Droppable,
@@ -38,6 +32,7 @@ import {
   DropResult,
 } from "@hello-pangea/dnd";
 import { Exercise, Workout, Set } from "@/lib/types";
+import { FullPageLoading } from "@/components/ui/loading";
 
 export default function WorkoutDetailPage() {
   const { data: session } = useSession();
@@ -45,18 +40,24 @@ export default function WorkoutDetailPage() {
   const params = useParams();
   const workoutId = params.id as string;
 
+  const [loading, setLoading] = useState(true);
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [newExerciseName, setNewExerciseName] = useState("");
   const [isExerciseDialogOpen, setIsExerciseDialogOpen] = useState(false);
-  const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
+  const [editingExerciseId, setEditingExerciseId] = useState<string | null>(
+    null,
+  );
   const [editExerciseName, setEditExerciseName] = useState("");
 
   const loadWorkout = useCallback(async () => {
+    setLoading(true);
     try {
       const response = await fetch("/api/workouts");
       if (response.ok) {
         const data = await response.json();
-        const foundWorkout = data.workouts.find((w: Workout) => w.id === workoutId);
+        const foundWorkout = data.workouts.find(
+          (w: Workout) => w.id === workoutId,
+        );
         if (foundWorkout) {
           // Convert timestamp strings back to Date objects
           const workoutWithDates = {
@@ -77,6 +78,8 @@ export default function WorkoutDetailPage() {
     } catch (error) {
       console.error("Load workout error:", error);
       router.push("/workouts");
+    } finally {
+      setLoading(false);
     }
   }, [workoutId, router]);
 
@@ -86,30 +89,33 @@ export default function WorkoutDetailPage() {
     }
   }, [session, workoutId, loadWorkout]);
 
-  const updateWorkout = useCallback(async (updatedWorkout: Workout) => {
-    if (!session?.user) return;
+  const updateWorkout = useCallback(
+    async (updatedWorkout: Workout) => {
+      if (!session?.user) return;
 
-    try {
-      // Get all workouts and update this one
-      const response = await fetch("/api/workouts");
-      if (response.ok) {
-        const data = await response.json();
-        const updatedWorkouts = data.workouts.map((w: Workout) =>
-          w.id === updatedWorkout.id ? updatedWorkout : w
-        );
+      try {
+        // Get all workouts and update this one
+        const response = await fetch("/api/workouts");
+        if (response.ok) {
+          const data = await response.json();
+          const updatedWorkouts = data.workouts.map((w: Workout) =>
+            w.id === updatedWorkout.id ? updatedWorkout : w,
+          );
 
-        // Sync the updated workouts
-        await fetch("/api/workouts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ workouts: updatedWorkouts }),
-        });
-        console.log("Workout updated and synced");
+          // Sync the updated workouts
+          await fetch("/api/workouts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ workouts: updatedWorkouts }),
+          });
+          console.log("Workout updated and synced");
+        }
+      } catch (error) {
+        console.error("Failed to update workout:", error);
       }
-    } catch (error) {
-      console.error("Failed to update workout:", error);
-    }
-  }, [session?.user]);
+    },
+    [session?.user],
+  );
 
   const createExercise = () => {
     if (!newExerciseName.trim() || !workout) return;
@@ -149,7 +155,7 @@ export default function WorkoutDetailPage() {
     const updatedWorkout = {
       ...workout,
       exercises: workout.exercises.map((exercise) =>
-        exercise.id === exerciseId ? { ...exercise, name: newName } : exercise
+        exercise.id === exerciseId ? { ...exercise, name: newName } : exercise,
       ),
     };
 
@@ -181,18 +187,23 @@ export default function WorkoutDetailPage() {
     updateWorkout(updatedWorkout);
   };
 
+  if (loading) {
+    return <FullPageLoading text="Loading workout..." />;
+  }
+
   if (!workout) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">Loading workout...</div>
-      </div>
-    );
+    return <FullPageLoading text="Loading workout..." />;
   }
 
   return (
     <div className="p-4 max-w-md mx-auto">
       <div className="flex items-center mb-6">
-        <Button variant="ghost" size="sm" onClick={() => router.back()} className="mr-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="mr-3"
+        >
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <h1 className="text-2xl font-bold">{workout.name}</h1>
@@ -219,7 +230,9 @@ export default function WorkoutDetailPage() {
                       className="cursor-pointer hover:shadow-md transition-shadow"
                       onClick={() =>
                         !editingExerciseId &&
-                        router.push(`/workouts/${workout.id}/exercises/${exercise.id}`)
+                        router.push(
+                          `/workouts/${workout.id}/exercises/${exercise.id}`,
+                        )
                       }
                     >
                       <CardContent className="p-4">
@@ -239,14 +252,20 @@ export default function WorkoutDetailPage() {
                                 }
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
-                                    updateExerciseName(exercise.id, editExerciseName);
+                                    updateExerciseName(
+                                      exercise.id,
+                                      editExerciseName,
+                                    );
                                   }
                                   if (e.key === "Escape") {
                                     cancelEditingExercise();
                                   }
                                 }}
                                 onBlur={() =>
-                                  updateExerciseName(exercise.id, editExerciseName)
+                                  updateExerciseName(
+                                    exercise.id,
+                                    editExerciseName,
+                                  )
                                 }
                                 autoFocus
                                 className="flex-1"
@@ -284,10 +303,13 @@ export default function WorkoutDetailPage() {
                               </AlertDialogTrigger>
                               <AlertDialogContent>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Exercise</AlertDialogTitle>
+                                  <AlertDialogTitle>
+                                    Delete Exercise
+                                  </AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Are you sure you want to delete &quot;{exercise.name}&quot;? This
-                                    action cannot be undone.
+                                    Are you sure you want to delete &quot;
+                                    {exercise.name}&quot;? This action cannot be
+                                    undone.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -314,7 +336,10 @@ export default function WorkoutDetailPage() {
         </Droppable>
       </DragDropContext>
 
-      <Dialog open={isExerciseDialogOpen} onOpenChange={setIsExerciseDialogOpen}>
+      <Dialog
+        open={isExerciseDialogOpen}
+        onOpenChange={setIsExerciseDialogOpen}
+      >
         <DialogTrigger asChild>
           <Button className="w-full">
             <Plus className="w-4 h-4 mr-2" />

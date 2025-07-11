@@ -40,6 +40,7 @@ import {
   DropResult,
 } from "@hello-pangea/dnd";
 import { Exercise, Workout, Set } from "@/lib/types";
+import { FullPageLoading } from "@/components/ui/loading";
 
 export default function ExerciseDetailPage() {
   const { data: session } = useSession();
@@ -48,6 +49,9 @@ export default function ExerciseDetailPage() {
   const workoutId = params.id as string;
   const exerciseId = params.exerciseId as string;
 
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [exercise, setExercise] = useState<Exercise | null>(null);
   const [newSetWeight, setNewSetWeight] = useState("");
@@ -55,11 +59,14 @@ export default function ExerciseDetailPage() {
   const [isSetDialogOpen, setIsSetDialogOpen] = useState(false);
 
   const loadWorkoutAndExercise = useCallback(async () => {
+    setLoading(true);
     try {
       const response = await fetch("/api/workouts");
       if (response.ok) {
         const data = await response.json();
-        const foundWorkout = data.workouts.find((w: Workout) => w.id === workoutId);
+        const foundWorkout = data.workouts.find(
+          (w: Workout) => w.id === workoutId,
+        );
         if (foundWorkout) {
           // Convert timestamp strings back to Date objects
           const workoutWithDates = {
@@ -74,7 +81,9 @@ export default function ExerciseDetailPage() {
           };
           setWorkout(workoutWithDates);
 
-          const foundExercise = workoutWithDates.exercises.find((e: Exercise) => e.id === exerciseId);
+          const foundExercise = workoutWithDates.exercises.find(
+            (e: Exercise) => e.id === exerciseId,
+          );
           if (foundExercise) {
             setExercise(foundExercise);
           } else {
@@ -87,6 +96,8 @@ export default function ExerciseDetailPage() {
     } catch (error) {
       console.error("Load workout and exercise error:", error);
       router.push("/workouts");
+    } finally {
+      setLoading(false);
     }
   }, [workoutId, exerciseId, router]);
 
@@ -96,39 +107,39 @@ export default function ExerciseDetailPage() {
     }
   }, [session, workoutId, exerciseId, loadWorkoutAndExercise]);
 
-  const updateWorkout = useCallback(async (updatedWorkout: Workout) => {
-    if (!session?.user) return;
+  const updateWorkout = useCallback(
+    async (updatedWorkout: Workout) => {
+      if (!session?.user) return;
 
-    try {
-      // Get all workouts and update this one
-      const response = await fetch("/api/workouts");
-      if (response.ok) {
-        const data = await response.json();
-        const updatedWorkouts = data.workouts.map((w: Workout) =>
-          w.id === updatedWorkout.id ? updatedWorkout : w
-        );
+      try {
+        // Get all workouts and update this one
+        const response = await fetch("/api/workouts");
+        if (response.ok) {
+          const data = await response.json();
+          const updatedWorkouts = data.workouts.map((w: Workout) =>
+            w.id === updatedWorkout.id ? updatedWorkout : w,
+          );
 
-        // Sync the updated workouts
-        await fetch("/api/workouts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ workouts: updatedWorkouts }),
-        });
-        console.log("Workout updated and synced");
+          // Sync the updated workouts
+          await fetch("/api/workouts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ workouts: updatedWorkouts }),
+          });
+          console.log("Workout updated and synced");
+        }
+      } catch (error) {
+        console.error("Failed to update workout:", error);
       }
-    } catch (error) {
-      console.error("Failed to update workout:", error);
-    }
-  }, [session?.user]);
+    },
+    [session?.user],
+  );
 
-  const createSet = () => {
-    if (
-      !newSetWeight.trim() ||
-      !newSetReps.trim() ||
-      !exercise ||
-      !workout
-    )
+  const createSet = async () => {
+    if (!newSetWeight.trim() || !newSetReps.trim() || !exercise || !workout)
       return;
+
+    setCreating(true);
 
     const newSet: Set = {
       id: Date.now().toString(),
@@ -145,7 +156,7 @@ export default function ExerciseDetailPage() {
     const updatedWorkout = {
       ...workout,
       exercises: workout.exercises.map((ex) =>
-        ex.id === exercise.id ? updatedExercise : ex
+        ex.id === exercise.id ? updatedExercise : ex,
       ),
     };
 
@@ -154,14 +165,19 @@ export default function ExerciseDetailPage() {
     setNewSetWeight("");
     setNewSetReps("");
     setIsSetDialogOpen(false);
-    updateWorkout(updatedWorkout);
+
+    try {
+      await updateWorkout(updatedWorkout);
+    } finally {
+      setCreating(false);
+    }
   };
 
   const updateSet = (setId: string, weight: number, reps: number) => {
     if (!exercise || !workout) return;
 
     const updatedSets = exercise.sets.map((set) =>
-      set.id === setId ? { ...set, weight, reps } : set
+      set.id === setId ? { ...set, weight, reps } : set,
     );
 
     const updatedExercise = { ...exercise, sets: updatedSets };
@@ -169,7 +185,7 @@ export default function ExerciseDetailPage() {
     const updatedWorkout = {
       ...workout,
       exercises: workout.exercises.map((ex) =>
-        ex.id === exercise.id ? updatedExercise : ex
+        ex.id === exercise.id ? updatedExercise : ex,
       ),
     };
 
@@ -178,8 +194,10 @@ export default function ExerciseDetailPage() {
     updateWorkout(updatedWorkout);
   };
 
-  const deleteSet = (setId: string) => {
+  const deleteSet = async (setId: string) => {
     if (!exercise || !workout) return;
+
+    setDeleting(setId);
 
     const updatedSets = exercise.sets.filter((set) => set.id !== setId);
     const updatedExercise = { ...exercise, sets: updatedSets };
@@ -187,13 +205,18 @@ export default function ExerciseDetailPage() {
     const updatedWorkout = {
       ...workout,
       exercises: workout.exercises.map((ex) =>
-        ex.id === exercise.id ? updatedExercise : ex
+        ex.id === exercise.id ? updatedExercise : ex,
       ),
     };
 
     setExercise(updatedExercise);
     setWorkout(updatedWorkout);
-    updateWorkout(updatedWorkout);
+
+    try {
+      await updateWorkout(updatedWorkout);
+    } finally {
+      setDeleting(null);
+    }
   };
 
   const onDragEnd = (result: DropResult) => {
@@ -207,7 +230,7 @@ export default function ExerciseDetailPage() {
     const updatedWorkout = {
       ...workout,
       exercises: workout.exercises.map((ex) =>
-        ex.id === exercise.id ? updatedExercise : ex
+        ex.id === exercise.id ? updatedExercise : ex,
       ),
     };
 
@@ -216,18 +239,23 @@ export default function ExerciseDetailPage() {
     updateWorkout(updatedWorkout);
   };
 
+  if (loading) {
+    return <FullPageLoading text="Loading exercise..." />;
+  }
+
   if (!workout || !exercise) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">Loading exercise...</div>
-      </div>
-    );
+    return <FullPageLoading text="Loading exercise..." />;
   }
 
   return (
     <div className="p-4 max-w-md mx-auto">
       <div className="flex items-center mb-6">
-        <Button variant="ghost" size="sm" onClick={() => router.back()} className="mr-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="mr-3"
+        >
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
@@ -247,16 +275,16 @@ export default function ExerciseDetailPage() {
               {exercise.sets.map((set, index) => (
                 <Draggable key={set.id} draggableId={set.id} index={index}>
                   {(provided) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                    >
+                    <div ref={provided.innerRef} {...provided.draggableProps}>
                       <SetCard
                         set={set}
                         index={index}
-                        onUpdate={(weight, reps) => updateSet(set.id, weight, reps)}
+                        onUpdate={(weight, reps) =>
+                          updateSet(set.id, weight, reps)
+                        }
                         onDelete={() => deleteSet(set.id)}
                         dragHandleProps={provided.dragHandleProps}
+                        isDeleting={deleting === set.id}
                       />
                     </div>
                   )}
@@ -270,9 +298,9 @@ export default function ExerciseDetailPage() {
 
       <Dialog open={isSetDialogOpen} onOpenChange={setIsSetDialogOpen}>
         <DialogTrigger asChild>
-          <Button className="w-full">
+          <Button className="w-full" disabled={creating}>
             <Plus className="w-4 h-4 mr-2" />
-            Add Set
+            {creating ? "Adding..." : "Add Set"}
           </Button>
         </DialogTrigger>
         <DialogContent>
@@ -301,7 +329,9 @@ export default function ExerciseDetailPage() {
               >
                 Cancel
               </Button>
-              <Button onClick={createSet}>Add Set</Button>
+              <Button onClick={createSet} disabled={creating}>
+                {creating ? "Adding..." : "Add Set"}
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -316,12 +346,14 @@ function SetCard({
   onUpdate,
   onDelete,
   dragHandleProps,
+  isDeleting = false,
 }: {
   set: Set;
   index: number;
   onUpdate: (weight: number, reps: number) => void;
   onDelete: () => void;
   dragHandleProps: object | null;
+  isDeleting?: boolean;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editWeight, setEditWeight] = useState(set.weight.toString());
@@ -417,8 +449,9 @@ function SetCard({
                       <AlertDialogAction
                         onClick={onDelete}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        disabled={isDeleting}
                       >
-                        Delete
+                        {isDeleting ? "Deleting..." : "Delete"}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>

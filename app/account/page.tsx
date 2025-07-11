@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AccountMenu } from "@/components/account-menu";
 import { AuthForm } from "@/components/auth-form";
 import { User } from "@/lib/types";
+import { FullPageLoading } from "@/components/ui/loading";
 
 export default function AccountPage() {
   const { data: session, status } = useSession();
@@ -17,11 +18,7 @@ export default function AccountPage() {
 
   // Show loading screen
   if (status === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">Loading...</div>
-      </div>
-    );
+    return <FullPageLoading />;
   }
 
   // Show auth form if not logged in

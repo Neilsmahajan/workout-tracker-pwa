@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { AuthForm } from "@/components/auth-form";
+import { FullPageLoading } from "@/components/ui/loading";
 
 export default function HomePage() {
   const { data: session, status } = useSession();
@@ -17,11 +18,7 @@ export default function HomePage() {
 
   // Show loading screen
   if (status === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">Loading...</div>
-      </div>
-    );
+    return <FullPageLoading text="Loading..." />;
   }
 
   // Show auth form if not logged in
@@ -30,9 +27,5 @@ export default function HomePage() {
   }
 
   // This should not render since we redirect above, but just in case
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">Redirecting...</div>
-    </div>
-  );
+  return <FullPageLoading text="Redirecting..." />;
 }
