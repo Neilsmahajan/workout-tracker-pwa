@@ -1,31 +1,15 @@
-"use client";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import HomeClient from "@/components/home-client";
 
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { AuthForm } from "@/components/auth-form";
-import { FullPageLoading } from "@/components/ui/loading";
+export default async function HomePage() {
+  const session = await auth();
 
-export default function HomePage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (status !== "loading" && session?.user) {
-      router.replace("/workouts");
-    }
-  }, [session, status, router]);
-
-  // Show loading screen
-  if (status === "loading") {
-    return <FullPageLoading text="Loading..." />;
+  // Server-side redirect for authenticated users
+  if (session?.user) {
+    redirect("/workouts");
   }
 
-  // Show auth form if not logged in
-  if (!session?.user) {
-    return <AuthForm />;
-  }
-
-  // This should not render since we redirect above, but just in case
-  return <FullPageLoading text="Redirecting..." />;
+  // Pass session to client component for faster initial render
+  return <HomeClient initialSession={session} />;
 }

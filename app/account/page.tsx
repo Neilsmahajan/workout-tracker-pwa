@@ -1,43 +1,15 @@
-"use client";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import AccountClient from "@/components/account-client";
 
-import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { AccountMenu } from "@/components/account-menu";
-import { AuthForm } from "@/components/auth-form";
-import { User } from "@/lib/types";
-import { FullPageLoading } from "@/components/ui/loading";
+export default async function AccountPage() {
+  const session = await auth();
 
-export default function AccountPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    await signOut();
-    router.push("/");
-  };
-
-  // Show loading screen
-  if (status === "loading") {
-    return <FullPageLoading />;
-  }
-
-  // Show auth form if not logged in
+  // Server-side redirect for unauthenticated users
   if (!session?.user) {
-    return <AuthForm />;
+    redirect("/");
   }
 
-  // Convert session user to our User type
-  const user: User = {
-    id: session.user.email || "",
-    name: session.user.name || "",
-    email: session.user.email || "",
-  };
-
-  return (
-    <AccountMenu
-      user={user}
-      onLogout={handleLogout}
-      onBack={() => router.push("/workouts")}
-    />
-  );
+  // Pass session to client component
+  return <AccountClient initialSession={session} />;
 }

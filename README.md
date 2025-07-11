@@ -33,10 +33,11 @@ A modern Progressive Web App (PWA) for tracking workouts, exercises, and sets. B
 - **🔐 User Authentication**: Secure Google OAuth authentication with Auth.js
 - **👤 Account Management**: User profile and settings
 - **🎯 Intuitive Navigation**: Clean, simple interface with minimal learning curve
-- **⚡ Fast Performance**: Optimized for speed and smooth interactions
+- **⚡ Fast Performance**: Optimized for speed with Server Components and smooth interactions
 - **🌙 Modern UI**: Beautiful design with shadcn/ui components
 - **🔄 Route-Based Navigation**: Separate pages for workouts, exercises, and sets with browser back button support
 - **📱 Deep Linking**: Users can bookmark and share specific workouts or exercises
+- **🚀 Loading States**: Comprehensive loading indicators throughout the app
 
 ## 🗺️ App Structure
 
